@@ -15,11 +15,13 @@ STREAMS = {
 }
 FONTES = {
     "br": ["mi.tv/mi.tv_br.channels.xml", "meuguia.tv/meuguia.tv.channels.xml"],
+    # Itália: fontes oficiais primeiro. A SuperGuidaTV não devolveu nada na 1ª
+    # execução (2026-11-17) — fica por último, só pros canais que nenhuma outra tem.
     "it": [
-        "superguidatv.it/superguidatv.it.channels.xml",
         "raiplay.it/raiplay.it.channels.xml",
         "mediasetinfinity.mediaset.it/mediasetinfinity.mediaset.it.channels.xml",
         "guidatv.sky.it/guidatv.sky.it.channels.xml",
+        "superguidatv.it/superguidatv.it.channels.xml",
     ],
 }
 CANAL = re.compile(r"<channel\b([^>]*)>([^<]*)</channel>")
