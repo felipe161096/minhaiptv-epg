@@ -1,0 +1,52 @@
+name: EPG diário
+
+on:
+  schedule:
+    - cron: "41 4 * * *"   # 01:41 em Brasília / 05:41 na Itália
+  workflow_dispatch:        # botão "Run workflow" pra rodar na hora
+
+permissions:
+  contents: write
+
+concurrency: epg
+
+jobs:
+  epg:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Baixar o grabber do iptv-org
+        run: |
+          git clone --depth 1 https://github.com/iptv-org/epg.git grabber
+          cd grabber && npm install
+
+      - name: Montar a lista de canais (BR + IT)
+        run: python3 scripts/montar_canais.py grabber/sites custom.channels.xml
+
+      - name: Baixar a programação (2 dias)
+        working-directory: grabber
+        run: npm run grab --- --channels=../custom.channels.xml --output=../guide.xml --days=2 --maxConnections=5 --timeout=20000
+
+      - name: Converter pra epg.json
+        run: python3 scripts/converter.py guide.xml epg.json
+
+      # Branch "dados" com UM commit só, sobrescrito todo dia: o repositório não
+      # cresce com o tempo. O app lê:
+      # https://raw.githubusercontent.com/<usuario>/minhaiptv-epg/dados/epg.json
+      - name: Publicar no branch "dados"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          mkdir pub && cp epg.json pub/ && cd pub
+          git init -q -b dados
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add epg.json
+          git commit -q -m "EPG $(date -u +%F)"
+          git push -f "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" dados
